@@ -4,32 +4,56 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 
-void threadHandler(int fileNum) {
+int fileCounter = 0;
+pthread_mutex_t fileLock;
 
+
+    //Lock Mutex
+    //Stat() file
+    //Unlock Mutex
+    //Exit thread
+void copyFiles(struct dirent *dirEntry) {
+    struct stat buffer;
+    while(pthread_mutex_lock(&fileLock) != 0) {}
+    
 }
 
-void copyFiles() {
+void threadHandler(struct dirent *dirEntry) {
+    int i = 0;
+    pthread_t file[fileCounter];
+    //Spawn new thread, call Copy() func
 
+    pthread_mutex_init(&fileLock, NULL);
+    if((pthread_create(&file[fileCounter], NULL, copyFiles, dirEntry)) != 0) {
+        printf("Failed to create thread: file\n");
+        exit(1);
+    }
 }
 
-int countFiles() {
-    int fileCounter = 0;
+int countFiles(struct dirent *dirEntry) {
     DIR *dir = opendir("./");
-    struct dirent *dirEntry;
 
     if(dir == NULL) {
         fprintf(stderr, "Failed to open directory ./: %s\n", strerror(errno));
         return 1;
     }
 
-    dirEntry = readdir(dir);
+    if(dirEntry == NULL) {
+        dirEntry = readdir(dir);
+    }
+    
     while(dirEntry != NULL) {
         if(dirEntry->d_type == DT_REG) {
+            //Call threadHandler()
+            threadHandler(dirEntry);
             fileCounter++;
         }
         else if(dirEntry->d_type == DT_DIR) {
             //Traverse directory and count files
+            //Call countFiles(dirEntry)
+            countFiles(dirEntry);
         }
     }
 }
