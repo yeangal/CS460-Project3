@@ -8,31 +8,38 @@
 
 int fileCounter = 0;
 pthread_mutex_t fileLock;
+struct dirent *dirEntry;
 
 
     //Lock Mutex
     //Stat() file
     //Unlock Mutex
     //Exit thread
-void copyFiles(struct dirent *dirEntry) {
+void *copyFiles() {
     struct stat buffer;
-    while(pthread_mutex_lock(&fileLock) != 0) {}
+    while(pthread_mutex_lock(&fileLock) != 0) {
+
+    }
     
 }
 
-void threadHandler(struct dirent *dirEntry) {
-    int i = 0;
+void threadHandler() {
     pthread_t file[fileCounter];
-    //Spawn new thread, call Copy() func
 
     pthread_mutex_init(&fileLock, NULL);
-    if((pthread_create(&file[fileCounter], NULL, copyFiles, dirEntry)) != 0) {
-        printf("Failed to create thread: file\n");
+    if((pthread_create(&file[fileCounter], NULL, copyFiles, NULL)) != 0) {
+        fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
         exit(1);
     }
+    
+    if(pthread_join(file[fileCounter], NULL) != 0) {
+        fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
+        exit(1);
+    }
+    pthread_mutex_destroy(&fileLock);
 }
 
-int countFiles(struct dirent *dirEntry) {
+int countFiles() {
     DIR *dir = opendir("./");
 
     if(dir == NULL) {
@@ -46,14 +53,11 @@ int countFiles(struct dirent *dirEntry) {
     
     while(dirEntry != NULL) {
         if(dirEntry->d_type == DT_REG) {
-            //Call threadHandler()
-            threadHandler(dirEntry);
+            threadHandler();
             fileCounter++;
         }
         else if(dirEntry->d_type == DT_DIR) {
-            //Traverse directory and count files
-            //Call countFiles(dirEntry)
-            countFiles(dirEntry);
+            countFiles();
         }
     }
 }
@@ -84,7 +88,6 @@ int directoryHandler() {
         printf("Directory already exists\n");
         closedir(dir);
         return 0;
-        // return dir;
     }
 }
 
