@@ -8,14 +8,14 @@
 #include <unistd.h>
 
 int fileCounter;
-pthread_mutex_t fileLock;
 struct dirent *dirEntry;
+pthread_mutex_t fileLock;
 
 void *copyFiles() {
-    char backupFile;
+    char backupFile[256];
     FILE *source, *destination;
 
-    printf("dirEntry = %s\n", dirEntry->d_name);
+    // printf("dirEntry = %s\n", dirEntry->d_name);
     // strcat(backupFile, ".backup/");
     // source = fopen(dirEntry, "r");
     // if(source == NULL) {
@@ -34,6 +34,7 @@ void *copyFiles() {
     // }
 
     // while(1) {
+    //     //Copy file
 
     // }
 
@@ -66,14 +67,9 @@ Opens current directory and iterates through each file
 If file is a regular file, call threadHandler() and increment fileCounter
 If file is a sub directory, recursively call countFiles()
 */
-int countFiles() {
-    char cwd[256];
+int countFiles(char *cwd) {
+    char newPath[256];
     DIR *dir;
-
-    if(getcwd(cwd, sizeof(cwd)) == NULL) {
-        fprintf(stderr, "Failed to get current working directory: %s\n", strerror(errno));
-        return 1;
-    }
 
     dir = opendir(cwd);
     printf("cwd: %s\n", cwd);
@@ -82,31 +78,32 @@ int countFiles() {
         return 1;
     }
 
-    printf("Check 1\n");
-    sleep(2);
-    if(dirEntry == NULL) {
-        dirEntry = readdir(dir);
-        if(dirEntry == NULL) {
-            fprintf(stderr, "Failed to read directory: %s\n", strerror(errno));
-            return 1;
-        }
-    }
-
-    printf("Check 2\n");
-    sleep(2);
     while((dirEntry = readdir(dir)) != NULL) {
-        printf("Check 3\n");
-        sleep(2);
         if(dirEntry->d_type == DT_REG) {
-            printf("Check 4: %s\n", dirEntry->d_name);
-            sleep(2);
+            printf("DT_REG: %s\n", dirEntry->d_name);
+            sleep(1);
             threadHandler();
             fileCounter++;
         }
         else if(dirEntry->d_type == DT_DIR) {
-            printf("Check 5: %s\n", dirEntry->d_name);
-            sleep(2);
-            countFiles();
+            if(strcmp(dirEntry->d_name, ".") == 0) {
+                continue;
+            }
+            else if(strcmp(dirEntry->d_name, "..") == 0) {
+                continue;
+            }
+            else if(strcmp(dirEntry->d_name, ".backup") == 0) {
+                continue;
+            }
+            else {
+                printf("DT_DIR: %s\n", dirEntry->d_name);
+                sleep(1);
+                strcpy(newPath, "");
+                strcat(newPath, cwd);
+                strcat(newPath, "/");
+                strcat(newPath, dirEntry->d_name);
+                countFiles(newPath);
+            }
         }
     }
 }
@@ -141,6 +138,7 @@ int directoryHandler() {
 }
 
 int main(int argc, char *argv[]) {
+    char cwd[256];
     fileCounter = 0;
     dirEntry = NULL;
 
@@ -149,11 +147,16 @@ int main(int argc, char *argv[]) {
         //Call function to restore all backup files from .backup/
     }
 
+    if(getcwd(cwd, sizeof(cwd)) == NULL) {
+        fprintf(stderr, "Failed to get current working directory: %s\n", strerror(errno));
+        return 1;
+    }
+
     if(directoryHandler() == 1) {
         exit(1);
     }
     else {
-        countFiles();
+        countFiles(cwd);
     }
     
     return 0;
