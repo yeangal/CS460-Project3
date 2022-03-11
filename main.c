@@ -18,19 +18,32 @@ struct dirent *dirEntry;
 pthread_mutex_t fileLock;
 
 void *copyFiles() {
+    int readChar;
     char backupFile[256];
+    char currrentFile[256];
     FILE *source, *destination;
+
+    // printf("Source filename: %s\n", newNode->filename);
+    // printf("Source file: %s\n", newNode->filepath);
 
     strcpy(backupFile, "");
     strcat(backupFile, ".backup/");
     strcat(backupFile, dirEntry->d_name);
-    // printf("Source filename: %s\n", newNode->filename);
-    // printf("Source file: %s\n", newNode->filepath);
-    source = fopen(newNode->filepath, "r");
+
+    strcpy(currrentFile, "");
+    strcat(currrentFile, newNode->filepath);
+    strcat(currrentFile, "/");
+    strcat(currrentFile, newNode->filename);
+
+    // printf("backupFile: %s\n", backupFile);
+    // printf("currentFile: %s\n", currrentFile);
+
+    source = fopen(currrentFile, "r");
     if(source == NULL) {
         fprintf(stderr, "Failed to open source file: %s\n", strerror(errno));
         exit(1);
     }
+
     destination = fopen(backupFile, "w");
     if(destination == NULL) {
         fprintf(stderr, "Failed to create backup file: %s\n", strerror(errno));
@@ -42,18 +55,19 @@ void *copyFiles() {
         exit(1);
     }
 
-    while(1) {
-        //Copy file
-        printf("Copy File....\n");
-        break;
+    while((readChar = fgetc(source)) != EOF) {
+        // printf("readChar: %c\n", readChar);
+        fputc(readChar, destination);
     }
+    printf("File copied.\n");
+    fclose(source);
+    fclose(destination);
 
     if(pthread_mutex_unlock(&fileLock) != 0) {
         fprintf(stderr, "Failed to unlock mutex: %s\n", strerror(errno));
         exit(1);
     }
     pthread_exit(NULL);
-    
 }
 
 void threadHandler() {
@@ -81,7 +95,7 @@ int countFiles(char *cwd) {
     char newPath[256];
 
     dir = opendir(cwd);
-    printf("cwd: %s\n", cwd);
+    // printf("cwd: %s\n", cwd);
     if(dir == NULL) {
         fprintf(stderr, "Failed to open directory: %s\n", strerror(errno));
         return 1;
