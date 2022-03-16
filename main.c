@@ -47,12 +47,12 @@ int compareFiles(char *backupFile, char *currentFile) {
     }
 
     if(difftime(attr1.st_mtim.tv_sec, attr2.st_mtim.tv_sec) > 0) {
-        printf("New file is newer..\n");
-        return 1;
+        printf("Backup file up to date.\n");
+        return 2;
     }
     else if(difftime(attr1.st_mtim.tv_sec, attr2.st_mtim.tv_sec) < 0){
-        printf("New file is older..\n");
-        return 2;
+        printf("New file is newer..\n");
+        return 1;
     }
     else {
         printf("Both files are the same..\n");
@@ -82,15 +82,13 @@ void *copyFiles() {
     // printf("currentFile: %s\n", currrentFile);
 
     if(compareFiles(backupFile, currrentFile) == 0) {
-        printf("Backup file is already up to date.\n");
         return;
     }
     else if(compareFiles(backupFile, currrentFile) == 2) {
-        printf("Backup file is newer.\n");
         return;
     }
     else {
-        printf("Copying file to .backup\n");
+        printf("Copying file to %s .backup\n", newNode->filename);
     }
 
     source = fopen(currrentFile, "r");
