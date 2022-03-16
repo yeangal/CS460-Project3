@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <time.h>
 
 struct node {
     char *filename;
@@ -16,6 +17,48 @@ int fileCounter;
 struct node *newNode;
 struct dirent *dirEntry;
 pthread_mutex_t fileLock;
+
+void restore() {
+
+}
+
+int compareFiles(char *backupFile, char *currentFile) {
+    char oldFile[256];
+    char newFile[256];
+    time_t oldTime;
+    time_t newTime;
+    struct stat attr1;
+    struct stat attr2;
+
+    strcpy(oldFile, backupFile);
+    strcpy(newFile, currentFile);
+
+    // printf("oldFile: %s\n", oldFile);
+    // printf("newFile: %s\n", newFile);
+
+    if(stat(oldFile, &attr1) != 0) {
+        fprintf(stderr, "Stat oldFile error: %s\n", strerror(errno));
+        exit(1);
+    }
+
+    if(stat(newFile, &attr2) != 0) {
+        fprintf(stderr, "Stat newFile error: %s\n", strerror(errno));
+        exit(1);
+    }
+
+    if(difftime(attr1.st_mtim.tv_sec, attr2.st_mtim.tv_sec) > 0) {
+        printf("New file is newer..\n");
+        return 1;
+    }
+    else if(difftime(attr1.st_mtim.tv_sec, attr2.st_mtim.tv_sec) < 0){
+        printf("New file is older..\n");
+        return 2;
+    }
+    else {
+        printf("Both files are the same..\n");
+        return 0;
+    }
+}
 
 void *copyFiles() {
     int readChar;
@@ -37,6 +80,18 @@ void *copyFiles() {
 
     // printf("backupFile: %s\n", backupFile);
     // printf("currentFile: %s\n", currrentFile);
+
+    if(compareFiles(backupFile, currrentFile) == 0) {
+        printf("Backup file is already up to date.\n");
+        return;
+    }
+    else if(compareFiles(backupFile, currrentFile) == 2) {
+        printf("Backup file is newer.\n");
+        return;
+    }
+    else {
+        printf("Copying file to .backup\n");
+    }
 
     source = fopen(currrentFile, "r");
     if(source == NULL) {
