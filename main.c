@@ -197,7 +197,7 @@ If creation suceeds, return 0
 int directoryHandler() {
     int newDir;
     DIR *dir = opendir(".backup/");
-    
+
     if(dir == NULL) {
         printf("Directory doesn't exist, creating dir .backup/\n");
         newDir = mkdir(".backup/", 0777);
@@ -207,7 +207,7 @@ int directoryHandler() {
         }
         else {
             printf("Directory .backup/ successfully created\n");
-            return 0;;
+            return 0;
         }
     }
     else {
