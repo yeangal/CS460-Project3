@@ -123,11 +123,11 @@ void *copyFiles() {
     pthread_exit(NULL);
 }
 
-void threadHandler() {
+void threadHandler(pthread_t *thrID) {
     pthread_t file[fileCounter];
 
     pthread_mutex_init(&fileLock, NULL);
-    if((pthread_create(&file[fileCounter], NULL, copyFiles, NULL)) != 0) {
+    if((pthread_create(thrID, NULL, copyFiles, NULL)) != 0) {
         fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
         exit(1);
     }
@@ -154,6 +154,9 @@ int countFiles(char *cwd) {
         return 1;
     }
 
+    pthread_t thrIDs[32];
+    int activeThreadCount = 0;
+
     while((dirEntry = readdir(dir)) != NULL) {
         if(dirEntry->d_type == DT_REG) {
             printf("DT_REG: %s\n", dirEntry->d_name);
@@ -162,7 +165,8 @@ int countFiles(char *cwd) {
             newNode->filepath = cwd;
             // printf("newNode->filename: %s\n", newNode->filename);
             // printf("newNode->filepath: %s\n", newNode->filepath);
-            threadHandler();
+            threadHandler(&thrIDs[activeThreadCount]);
+            activeThreadCount++;
             fileCounter++;
         }
         else if(dirEntry->d_type == DT_DIR) {
@@ -185,6 +189,10 @@ int countFiles(char *cwd) {
                 countFiles(newPath);
             }
         }
+    }
+    while(activeThreadCount > -1) {
+        //pthread_join thrIDs[activeThreadCount]
+        activeThreadCount--;
     }
 }
 
