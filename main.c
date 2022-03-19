@@ -131,10 +131,7 @@ void threadHandler(pthread_t *thrID) {
         fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
         exit(1);
     }
-    if(pthread_join(file[fileCounter], NULL) != 0) {
-        fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
-        exit(1);
-    }
+
     pthread_mutex_destroy(&fileLock);
 }
 
@@ -191,7 +188,10 @@ int countFiles(char *cwd) {
         }
     }
     while(activeThreadCount > -1) {
-        //pthread_join thrIDs[activeThreadCount]
+        if(pthread_join(thrIDs[activeThreadCount], NULL) != 0) {
+            fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
+            exit(1);
+        }
         activeThreadCount--;
     }
 }
