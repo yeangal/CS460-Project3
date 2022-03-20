@@ -37,26 +37,22 @@ int compareFiles(char *backupFile, char *currentFile) {
     // printf("newFile: %s\n", newFile);
 
     if(stat(oldFile, &attr1) != 0) {
-        fprintf(stderr, "Stat oldFile error: %s\n", strerror(errno));
-        exit(1);
+        // fprintf(stderr, "Stat oldFile error: %s\n", strerror(errno));
+        return 0;
     }
 
     if(stat(newFile, &attr2) != 0) {
-        fprintf(stderr, "Stat newFile error: %s\n", strerror(errno));
-        exit(1);
+        // fprintf(stderr, "Stat newFile error: %s\n", strerror(errno));
+        return 0;
     }
 
     if(difftime(attr1.st_mtim.tv_sec, attr2.st_mtim.tv_sec) > 0) {
         printf("Backup file up to date.\n");
-        return 2;
+        return 1;
     }
     else if(difftime(attr1.st_mtim.tv_sec, attr2.st_mtim.tv_sec) < 0){
         printf("New file is newer..\n");
-        return 1;
-    }
-    else {
-        printf("Both files are the same..\n");
-        return 0;
+        return 2;
     }
 }
 
@@ -81,7 +77,7 @@ void *copyFiles() {
     // printf("backupFile: %s\n", backupFile);
     // printf("currentFile: %s\n", currrentFile);
 
-    if(compareFiles(backupFile, currrentFile) == 0) {
+    if(compareFiles(backupFile, currrentFile) == 1) {
         pthread_exit(NULL);
     }
     else if(compareFiles(backupFile, currrentFile) == 2) {
