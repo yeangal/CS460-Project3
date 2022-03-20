@@ -151,7 +151,7 @@ void countFiles(char *cwd) {
     }
 
     pthread_t thrIDs[32];
-    int activeThreadCount = 0;
+    int activeThreadCount = -1;
 
     while((dirEntry = readdir(dir)) != NULL) {
         if(dirEntry->d_type == DT_REG) {
@@ -162,9 +162,9 @@ void countFiles(char *cwd) {
             // printf("newNode->filename: %s\n", newNode->filename);
             // printf("newNode->filepath: %s\n", newNode->filepath);
             printf("before threading\n");
+            activeThreadCount++;
             threadHandler(&thrIDs[activeThreadCount]);
             printf("After threadHandler\n");
-            activeThreadCount++;
             fileCounter++;
         }
         else if(dirEntry->d_type == DT_DIR) {
