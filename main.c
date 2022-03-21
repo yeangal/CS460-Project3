@@ -14,6 +14,7 @@ struct node {
 };
 
 int fileCounter;
+int activeThreadCount = -1;
 struct node *newNode;
 struct dirent *dirEntry;
 pthread_mutex_t fileLock;
@@ -98,7 +99,7 @@ void *copyFiles() {
         fprintf(stderr, "Failed to create backup file: %s\n", strerror(errno));
         pthread_exit(NULL);
     }
-
+    printf("Check 1\n");
     if(pthread_mutex_lock(&fileLock) != 0) {
         fprintf(stderr, "Failed to lock mutex: %s\n", strerror(errno));
         pthread_exit(NULL);
@@ -120,7 +121,6 @@ void *copyFiles() {
 }
 
 void threadHandler(pthread_t *thrID) {
-
     pthread_mutex_init(&fileLock, NULL);
     if((pthread_create(thrID, NULL, copyFiles, NULL)) != 0) {
         fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
@@ -147,7 +147,6 @@ void countFiles(char *cwd) {
     }
 
     pthread_t thrIDs[32];
-    int activeThreadCount = -1;
 
     while((dirEntry = readdir(dir)) != NULL) {
         if(dirEntry->d_type == DT_REG) {
@@ -158,6 +157,7 @@ void countFiles(char *cwd) {
             // printf("newNode->filename: %s\n", newNode->filename);
             // printf("newNode->filepath: %s\n", newNode->filepath);
             printf("before threading\n");
+            // printf("DT_REG -> activeThreadCount: %d\n", activeThreadCount);
             activeThreadCount++;
             threadHandler(&thrIDs[activeThreadCount]);
             printf("After threadHandler\n");
@@ -186,11 +186,13 @@ void countFiles(char *cwd) {
     }
     printf("Before Join\n");
     while(activeThreadCount > -1) {
+        printf("activeThreadCount: %d\n", activeThreadCount);
         if(pthread_join(thrIDs[activeThreadCount], NULL) != 0) {
             fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
             exit(1);
         }
         activeThreadCount--;
+        printf("activeThreadCount: %d\n", activeThreadCount);
     }
     printf("After Join\n");
 
@@ -207,7 +209,7 @@ int directoryHandler() {
     DIR *dir = opendir(".backup/");
 
     if(dir == NULL) {
-        printf("Directory doesn't exist, creating dir .backup/\n");
+        printf("Backup directory doesn't exist, creating dir .backup/\n");
         newDir = mkdir(".backup/", 0777);
         if(newDir == -1) {
             fprintf(stderr, "Failed to create directory: %s\n", strerror(errno));
@@ -219,7 +221,7 @@ int directoryHandler() {
         }
     }
     else {
-        printf("Directory already exists\n");
+        printf("Backup directory already exists\n");
         closedir(dir);
         return 0;
     }
@@ -233,6 +235,7 @@ int main(int argc, char *argv[]) {
     //Check for -r command
     if(argc > 1) {
         //Call function to restore all backup files from .backup/
+        restore();
     }
 
     if(getcwd(cwd, sizeof(cwd)) == NULL) {
