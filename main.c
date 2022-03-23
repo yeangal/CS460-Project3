@@ -14,6 +14,7 @@ struct node {
 };
 
 int fileCounter;
+int totalBytes = 0;
 struct node *newNode;
 struct dirent *dirEntry;
 pthread_mutex_t fileLock;
@@ -46,11 +47,11 @@ int compareFiles(char *backupFile, char *currentFile) {
     }
 
     if(difftime(attr1.st_mtim.tv_sec, attr2.st_mtim.tv_sec) > 0) {
-        printf("Backup file up to date.\n");
+        // printf("%s Does not need backing up\n", newFile);
         return 1;
     }
     else if(difftime(attr1.st_mtim.tv_sec, attr2.st_mtim.tv_sec) < 0){
-        printf("%s is newer than %s\n", oldFile, newFile);
+        // printf("%s is newer than %s\n", newFile, oldFile);
         return 2;
     }
 }
@@ -76,10 +77,12 @@ void *copyFiles() {
     // printf("currentFile: %s\n", currrentFile);
 
     if(compareFiles(backupFile, currrentFile) == 1) {
+        printf("%s Does not need backing up\n", newNode->filename);
+        fileCounter--;
         pthread_exit(NULL);
     }
     else if(compareFiles(backupFile, currrentFile) == 2) {
-        printf("[Thread %d] Overwriting %s\n", fileCounter, backupFile);
+        printf("[Thread %d] WARNING: Overwriting %s\n", fileCounter, backupFile);
     }
     else {
         printf("[Thread %d] Backing up %s\n", fileCounter, newNode->filename);
@@ -102,6 +105,7 @@ void *copyFiles() {
         // printf("readChar: %c\n", readChar);
         fputc(readChar, destination);
         byteCounter++;
+        totalBytes++;
     }
     printf("[Thread %d] Copied %d bytes from %s to %s\n", fileCounter, byteCounter, newNode->filename, backupFile);
     fclose(source);
@@ -229,6 +233,7 @@ int main(int argc, char *argv[]) {
     else {
         countFiles(cwd);
     }
+    printf("Successfully copied %d files (%d bytes)\n", fileCounter, totalBytes);
 
     return 0;
 }
