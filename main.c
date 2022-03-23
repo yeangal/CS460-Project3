@@ -14,7 +14,8 @@ struct node {
 };
 
 int fileCounter;
-int totalBytes = 0;
+int totalFiles;
+int totalBytes;
 struct node *newNode;
 struct dirent *dirEntry;
 pthread_mutex_t fileLock;
@@ -77,8 +78,8 @@ void *copyFiles() {
     // printf("currentFile: %s\n", currrentFile);
 
     if(compareFiles(backupFile, currrentFile) == 1) {
-        printf("%s Does not need backing up\n", newNode->filename);
-        fileCounter--;
+        printf("[Thread %d] %s Does not need backing up\n", fileCounter, newNode->filename);
+        totalFiles--;
         pthread_exit(NULL);
     }
     else if(compareFiles(backupFile, currrentFile) == 2) {
@@ -150,6 +151,7 @@ void countFiles(char *cwd) {
             newNode->filename = dirEntry->d_name;
             newNode->filepath = cwd;
             threadHandler();
+            totalFiles++;
             fileCounter++;
         }
         else if(dirEntry->d_type == DT_DIR) {
@@ -214,6 +216,8 @@ int directoryHandler() {
 int main(int argc, char *argv[]) {
     char cwd[256];
     fileCounter = 0;
+    totalFiles = 0;
+    totalBytes = 0;
     dirEntry = NULL;
     newNode = malloc(sizeof(struct node *));
     //Check for -r command
@@ -233,7 +237,7 @@ int main(int argc, char *argv[]) {
     else {
         countFiles(cwd);
     }
-    printf("Successfully copied %d files (%d bytes)\n", fileCounter, totalBytes);
+    printf("Successfully copied %d files (%d bytes)\n", totalFiles, totalBytes);
 
     return 0;
 }
