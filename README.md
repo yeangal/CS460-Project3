@@ -1,7 +1,7 @@
 # CS460-Project3
 File Backup System (BackItUp!)
 
-- SJF
+- Program Details
   - [1] Program creates a backup hidden backup directory called ".backup/"
   - [2] Program iterates through the current working directory and subdirectories incrementing a counter for each regular file encountered
   - [3] Program calls on ThreadHandler() to spawn a thread for each regular file counted
