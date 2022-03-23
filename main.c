@@ -26,8 +26,6 @@ void restore() {
 int compareFiles(char *backupFile, char *currentFile) {
     char oldFile[256];
     char newFile[256];
-    // time_t oldTime;
-    // time_t newTime;
     struct stat attr1;
     struct stat attr2;
 
@@ -63,9 +61,6 @@ void *copyFiles() {
     char backupFile[256];
     char currrentFile[256];
     FILE *source, *destination;
-
-    // printf("Source filename: %s\n", newNode->filename);
-    // printf("Source file: %s\n", newNode->filepath);
 
     strcpy(backupFile, "");
     strcat(backupFile, ".backup/");
@@ -103,11 +98,6 @@ void *copyFiles() {
     }
 
     pthread_mutex_lock(&fileLock);
-    // if(pthread_mutex_lock(&fileLock) != 0) {
-    //     fprintf(stderr, "Failed to lock mutex: %s\n", strerror(errno));
-    //     pthread_exit(NULL);
-    // }
-
     while((readChar = fgetc(source)) != EOF) {
         // printf("readChar: %c\n", readChar);
         fputc(readChar, destination);
@@ -118,11 +108,6 @@ void *copyFiles() {
     fclose(destination);
 
     pthread_mutex_unlock(&fileLock);
-    
-    // if(pthread_mutex_unlock(&fileLock) != 0) {
-    //     fprintf(stderr, "Failed to unlock mutex: %s\n", strerror(errno));
-    //     pthread_exit(NULL);
-    // }
     pthread_exit(NULL);
 }
 
@@ -133,6 +118,10 @@ void threadHandler() {
         exit(1);
     }
 
+    if(pthread_join(thrID[fileCounter], NULL) != 0) {
+        fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
+        exit(1);
+    }
     pthread_mutex_destroy(&fileLock);
 }
 
@@ -146,7 +135,6 @@ void countFiles(char *cwd) {
     char newPath[256];
 
     dir = opendir(cwd);
-    // printf("cwd: %s\n", cwd);
     if(dir == NULL) {
         fprintf(stderr, "Failed to open directory: %s\n", strerror(errno));
         return;
@@ -154,12 +142,9 @@ void countFiles(char *cwd) {
 
     while((dirEntry = readdir(dir)) != NULL) {
         if(dirEntry->d_type == DT_REG) {
-            printf("DT_REG: %s\n", dirEntry->d_name);
             sleep(1);
             newNode->filename = dirEntry->d_name;
             newNode->filepath = cwd;
-            // printf("newNode->filename: %s\n", newNode->filename);
-            // printf("newNode->filepath: %s\n", newNode->filepath);
             threadHandler();
             fileCounter++;
         }
@@ -174,7 +159,6 @@ void countFiles(char *cwd) {
                 continue;
             }
             else {
-                printf("DT_DIR: %s\n", dirEntry->d_name);
                 sleep(1);
                 strcpy(newPath, "");
                 strcat(newPath, cwd);
@@ -184,14 +168,14 @@ void countFiles(char *cwd) {
             }
         }
     }
-    while(fileCounter > 0) {
-        printf("fileCounter: %d\n", fileCounter);
-        if(pthread_join(thrID[fileCounter], NULL) != 0) {
-            fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
-            exit(1);
-        }
-        fileCounter--;
-    }
+    // while(fileCounter > 0) {
+    //     printf("fileCounter: %d\n", fileCounter);
+    //     if(pthread_join(thrID[fileCounter], NULL) != 0) {
+    //         fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
+    //         exit(1);
+    //     }
+    //     fileCounter--;
+    // }
 }
 
 /*
