@@ -14,6 +14,7 @@ struct node {
 };
 
 int fileCounter;
+int threadNum;
 int activeThreadCount = -1;
 struct node *newNode;
 struct dirent *dirEntry;
@@ -58,6 +59,7 @@ int compareFiles(char *backupFile, char *currentFile) {
 }
 
 void *copyFiles() {
+    int byteCounter = 0;
     int readChar;
     char backupFile[256];
     char currrentFile[256];
@@ -69,6 +71,7 @@ void *copyFiles() {
     strcpy(backupFile, "");
     strcat(backupFile, ".backup/");
     strcat(backupFile, dirEntry->d_name);
+    strcat(backupFile, ".bak");
 
     strcpy(currrentFile, "");
     strcat(currrentFile, newNode->filepath);
@@ -85,7 +88,7 @@ void *copyFiles() {
         pthread_exit(NULL);
     }
     else {
-        printf("Copying file to %s .backup\n", newNode->filename);
+        printf("[Thread %d] Backing up %s\n", activeThreadCount + 1, newNode->filename);
     }
 
     source = fopen(currrentFile, "r");
@@ -99,7 +102,7 @@ void *copyFiles() {
         fprintf(stderr, "Failed to create backup file: %s\n", strerror(errno));
         pthread_exit(NULL);
     }
-    printf("Check 1\n");
+
     if(pthread_mutex_lock(&fileLock) != 0) {
         fprintf(stderr, "Failed to lock mutex: %s\n", strerror(errno));
         pthread_exit(NULL);
@@ -108,8 +111,9 @@ void *copyFiles() {
     while((readChar = fgetc(source)) != EOF) {
         // printf("readChar: %c\n", readChar);
         fputc(readChar, destination);
+        byteCounter++;
     }
-    printf("File copied.\n");
+    printf("[Thread %d] Copied %d bytes from %s to %s\n", activeThreadCount + 1, byteCounter, newNode->filename, backupFile);
     fclose(source);
     fclose(destination);
 
