@@ -52,7 +52,9 @@ int compareFiles(char *backupFile, char *currentFile) {
         // printf("%s is newer than %s\n", newFile, oldFile);
         return 2;
     }
-    return 0;
+    else {
+        return 0;
+    }
 }
 
 void *copyFiles() {
@@ -71,9 +73,6 @@ void *copyFiles() {
     strcat(currrentFile, newNode->filepath);
     strcat(currrentFile, "/");
     strcat(currrentFile, newNode->filename);
-
-    // printf("backupFile: %s\n", backupFile);
-    // printf("currentFile: %s\n", currrentFile);
 
     if(compareFiles(backupFile, currrentFile) == 1) {
         printf("[Thread %d] %s Does not need backing up\n", fileCounter, newNode->filename);
@@ -101,7 +100,6 @@ void *copyFiles() {
 
     pthread_mutex_lock(&fileLock);
     while((readChar = fgetc(source)) != EOF) {
-        // printf("readChar: %c\n", readChar);
         fputc(readChar, destination);
         byteCounter++;
         totalBytes++;
@@ -115,6 +113,7 @@ void *copyFiles() {
 }
 
 void *copyRestore() {
+    int byteCounter = 0;
     int readChar;
     char backupFile[256];
     char restoreFile[256];
@@ -138,6 +137,7 @@ void *copyRestore() {
         pthread_exit(NULL);
     }
 
+    printf("[Thread %d] Restoring %s\n", fileCounter, backupFile);
     source = fopen(backupFile, "r");
     if(source == NULL) {
         fprintf(stderr, "Failed to open backup file: %s\n", strerror(errno));
@@ -152,15 +152,16 @@ void *copyRestore() {
 
     pthread_mutex_lock(&fileLock);
     while((readChar = fgetc(source)) != EOF) {
-        // printf("readChar: %c\n", readChar);
         fputc(readChar, destination);
+        byteCounter++;
+        totalBytes++;
     }
+    printf("[Thread %d] Copied %d bytes from %s to %s\n", fileCounter, byteCounter, backupFile, restoreFile);
     fclose(source);
     fclose(destination);
 
     pthread_mutex_unlock(&fileLock);
     pthread_exit(NULL);
-    return NULL;
 }
 
 void threadHandler() {
@@ -203,11 +204,19 @@ void countFiles(char *cwd) {
 
     while((dirEntry = readdir(dir)) != NULL) {
         if(dirEntry->d_type == DT_REG) {
-            newNode->filename = dirEntry->d_name;
-            newNode->filepath = cwd;
-            threadHandler();
-            totalFiles++;
-            fileCounter++;
+            if(strcmp(dirEntry->d_name, "BackItUp") == 0) {
+                continue;
+            }
+            else if(strcmp(dirEntry->d_name, "main.c") == 0) {
+                continue;
+            }
+            else {
+                newNode->filename = dirEntry->d_name;
+                newNode->filepath = cwd;
+                threadHandler();
+                totalFiles++;
+                fileCounter++;
+            }
         }
         else if(dirEntry->d_type == DT_DIR) {
             if(strcmp(dirEntry->d_name, ".") == 0) {
@@ -228,14 +237,6 @@ void countFiles(char *cwd) {
             }
         }
     }
-    // while(fileCounter > 0) {
-    //     printf("fileCounter: %d\n", fileCounter);
-    //     if(pthread_join(thrID[fileCounter], NULL) != 0) {
-    //         fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
-    //         exit(1);
-    //     }
-    //     fileCounter--;
-    // }
 }
 
 void restore() {
@@ -258,6 +259,8 @@ void restore() {
             newNode->filename = dirEntry->d_name;
             newNode->filepath = cwd;
             threadHandler();
+            totalFiles++;
+            fileCounter++;
         }
     }
 
@@ -309,10 +312,8 @@ int main(int argc, char *argv[]) {
     if(argc > 1) {
         //Call function to restore all backup files from .backup/
         restore();
-        return 0;
     }
-
-    if(directoryHandler() == 1) {
+    else if(directoryHandler() == 1) {
         exit(1);
     }
     else {
