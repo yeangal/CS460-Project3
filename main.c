@@ -16,14 +16,11 @@ struct node {
 int fileCounter;
 int totalFiles;
 int totalBytes;
+int restoring = 0;
 struct node *newNode;
 struct dirent *dirEntry;
 pthread_mutex_t fileLock;
 pthread_t thrID[32];
-
-void restore() {
-
-}
 
 int compareFiles(char *backupFile, char *currentFile) {
     char oldFile[256];
@@ -55,6 +52,7 @@ int compareFiles(char *backupFile, char *currentFile) {
         // printf("%s is newer than %s\n", newFile, oldFile);
         return 2;
     }
+    return 0;
 }
 
 void *copyFiles() {
@@ -116,17 +114,75 @@ void *copyFiles() {
     pthread_exit(NULL);
 }
 
+void *copyRestore() {
+    int readChar;
+    char backupFile[256];
+    char restoreFile[256];
+    FILE *source, *destination;
+
+    strcpy(backupFile, "");
+    strcat(backupFile, ".backup/");
+    strcat(backupFile, newNode->filename);
+
+    strcpy(restoreFile, "");
+    strcat(restoreFile, newNode->filepath);
+    strcat(restoreFile, "/");
+    strcat(restoreFile, newNode->filename);
+    //remove .bak
+    restoreFile[strlen(restoreFile)-4] = '\0';
+
+    int fileDif = compareFiles(backupFile, restoreFile);
+
+    if(fileDif == 2) {
+        //no restore
+        pthread_exit(NULL);
+    }
+
+    source = fopen(backupFile, "r");
+    if(source == NULL) {
+        fprintf(stderr, "Failed to open backup file: %s\n", strerror(errno));
+        pthread_exit(NULL);
+    }
+
+    destination = fopen(restoreFile, "w");
+    if(destination == NULL) {
+        fprintf(stderr, "Failed to create restored file: %s\n", strerror(errno));
+        pthread_exit(NULL);
+    }
+
+    pthread_mutex_lock(&fileLock);
+    while((readChar = fgetc(source)) != EOF) {
+        // printf("readChar: %c\n", readChar);
+        fputc(readChar, destination);
+    }
+    fclose(source);
+    fclose(destination);
+
+    pthread_mutex_unlock(&fileLock);
+    pthread_exit(NULL);
+    return NULL;
+}
+
 void threadHandler() {
     pthread_mutex_init(&fileLock, NULL);
-    if((pthread_create(&thrID[fileCounter], NULL, copyFiles, NULL)) != 0) {
-        fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
-        exit(1);
+
+    if(restoring) {
+        if((pthread_create(&thrID[fileCounter], NULL, copyRestore, NULL)) != 0) {
+            fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
+            exit(1);
+        }
+    }else {
+        if((pthread_create(&thrID[fileCounter], NULL, copyFiles, NULL)) != 0) {
+            fprintf(stderr, "Failed to create thread: %s\n", strerror(errno));
+            exit(1);
+        }
     }
 
     if(pthread_join(thrID[fileCounter], NULL) != 0) {
         fprintf(stderr, "Failed to join thread: %s\n", strerror(errno));
         exit(1);
     }
+
     pthread_mutex_destroy(&fileLock);
 }
 
@@ -147,7 +203,6 @@ void countFiles(char *cwd) {
 
     while((dirEntry = readdir(dir)) != NULL) {
         if(dirEntry->d_type == DT_REG) {
-            sleep(1);
             newNode->filename = dirEntry->d_name;
             newNode->filepath = cwd;
             threadHandler();
@@ -165,7 +220,6 @@ void countFiles(char *cwd) {
                 continue;
             }
             else {
-                sleep(1);
                 strcpy(newPath, "");
                 strcat(newPath, cwd);
                 strcat(newPath, "/");
@@ -182,6 +236,31 @@ void countFiles(char *cwd) {
     //     }
     //     fileCounter--;
     // }
+}
+
+void restore() {
+    char cwd[256];
+    restoring = 1;
+
+    if(getcwd(cwd, sizeof(cwd)) == NULL) {
+        fprintf(stderr, "Failed to get current working directory: %s\n", strerror(errno));
+        return;
+    }
+
+    DIR *dir = opendir(".backup/");
+    if(dir == NULL) {
+        printf("No backup directory to restore from\n");
+        return;
+    }
+
+    while((dirEntry = readdir(dir)) != NULL) {
+        if(dirEntry->d_type == DT_REG) {
+            newNode->filename = dirEntry->d_name;
+            newNode->filepath = cwd;
+            threadHandler();
+        }
+    }
+
 }
 
 /*
@@ -220,15 +299,17 @@ int main(int argc, char *argv[]) {
     totalBytes = 0;
     dirEntry = NULL;
     newNode = malloc(sizeof(struct node *));
-    //Check for -r command
-    if(argc > 1) {
-        //Call function to restore all backup files from .backup/
-        restore();
-    }
 
     if(getcwd(cwd, sizeof(cwd)) == NULL) {
         fprintf(stderr, "Failed to get current working directory: %s\n", strerror(errno));
         return 1;
+    }
+
+    //Check for -r command
+    if(argc > 1) {
+        //Call function to restore all backup files from .backup/
+        restore();
+        return 0;
     }
 
     if(directoryHandler() == 1) {
