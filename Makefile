@@ -1,2 +1,2 @@
 make:
-	gcc -pthread -Wall -Werror -o main main.c
+	gcc -pthread -Wall -Werror -o BackItUp main.c
